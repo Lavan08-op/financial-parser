@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = axios.create({ baseURL: "http://127.0.0.1:8000" });
+const API = axios.create({ baseURL: "https://financial-parser-4e4u.onrender.com" });
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
