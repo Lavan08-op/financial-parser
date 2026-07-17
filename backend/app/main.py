@@ -1,33 +1,37 @@
-import sentry_sdk
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
-from starlette.middleware.cors import CORSMiddleware
-
-from app.api.main import api_router
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
+from app.core.database import engine, Base
+import os
 
+# Create tables
+Base.metadata.create_all(bind=engine)
 
-def custom_generate_unique_id(route: APIRoute) -> str:
-    return f"{route.tags[0]}-{route.name}"
+# Create dirs
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+os.makedirs(settings.REPORTS_DIR, exist_ok=True)
 
+app = FastAPI(title=settings.PROJECT_NAME, docs_url="/docs", redoc_url="/redoc")
 
-if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
-    sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
-
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    generate_unique_id_function=custom_generate_unique_id,
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Set all CORS enabled origins
-if settings.all_cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.all_cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# Import routers
+from app.api import auth, upload, parser, reports, dashboard, logs
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(upload.router, prefix="/api/documents", tags=["documents"])
+app.include_router(parser.router, prefix="/api/parser", tags=["parser"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+app.include_router(logs.router, prefix="/api/logs", tags=["logs"])
+
+@app.get("/")
+def root():
+    return {"message": "Financial Document Parser API", "docs": "/docs"}

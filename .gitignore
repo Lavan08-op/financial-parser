@@ -1,7 +1,33 @@
-.vscode/*
-!.vscode/extensions.json
+# VS Code
+.vscode/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment variables
+.env
+backend/.env
+
+# Node
 node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
+frontend/node_modules/
+
+# Build
+dist/
+build/
+
+# Uploads
+backend/app/uploads/*
+!backend/app/uploads/.gitkeep
+
+backend/app/reports/*
+!backend/app/reports/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,133 +1,75 @@
+from sqlalchemy import Column, String, Integer, Float, DateTime, Text, ForeignKey, Enum
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSON
+from datetime import datetime
 import uuid
-from datetime import UTC, datetime
+import enum
+from app.core.database import Base
 
-from pydantic import EmailStr
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+def gen_uuid():
+    return str(uuid.uuid4())
 
+class UserRole(str, enum.Enum):
+    admin = "admin"
+    analyst = "analyst"
+    user = "user"
 
-def get_datetime_utc() -> datetime:
-    return datetime.now(UTC)
+class DocumentStatus(str, enum.Enum):
+    uploaded = "uploaded"
+    processing = "processing"
+    parsed = "parsed"
+    validation_failed = "validation_failed"
+    review_pending = "review_pending"
+    approved = "approved"
+    rejected = "rejected"
 
+class User(Base):
+    __tablename__ = "users"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.user)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    documents = relationship("Document", back_populates="uploader")
 
-# Shared properties
-class UserBase(SQLModel):
-    email: EmailStr = Field(unique=True, index=True, max_length=255)
-    is_active: bool = True
-    is_superuser: bool = False
-    full_name: str | None = Field(default=None, max_length=255)
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    document_name = Column(String, nullable=False)
+    document_type = Column(String, nullable=True)
+    file_path = Column(String, nullable=False)
+    uploaded_by = Column(String, ForeignKey("users.id"))
+    status = Column(Enum(DocumentStatus), default=DocumentStatus.uploaded)
+    processing_time = Column(Float, nullable=True)
+    file_size = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    uploader = relationship("User", back_populates="documents")
+    parsed_report = relationship("ParsedReport", back_populates="document", uselist=False)
+    audit_logs = relationship("AuditLog", back_populates="document")
 
+class ParsedReport(Base):
+    __tablename__ = "parsed_reports"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    document_id = Column(String, ForeignKey("documents.id"))
+    parsed_data = Column(JSON, nullable=True)
+    validation_status = Column(String, nullable=True)
+    review_status = Column(String, default="pending")
+    reviewed_by = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    document = relationship("Document", back_populates="parsed_report")
 
-# Properties to receive via API on creation
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=128)
-
-
-class UserRegister(SQLModel):
-    email: EmailStr = Field(max_length=255)
-    password: str = Field(min_length=8, max_length=128)
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on update, all are optional
-class UserUpdate(SQLModel):
-    email: EmailStr | None = Field(default=None, max_length=255)
-    is_active: bool | None = None
-    is_superuser: bool | None = None
-    full_name: str | None = Field(default=None, max_length=255)
-    password: str | None = Field(default=None, min_length=8, max_length=128)
-
-
-class UserUpdateMe(SQLModel):
-    full_name: str | None = Field(default=None, max_length=255)
-    email: EmailStr | None = Field(default=None, max_length=255)
-
-
-class UpdatePassword(SQLModel):
-    current_password: str = Field(min_length=8, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
-
-
-# Database model, database table inferred from class name
-class User(UserBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
-
-
-# Properties to return via API, id is always required
-class UserPublic(UserBase):
-    id: uuid.UUID
-    created_at: datetime | None = None
-
-
-class UsersPublic(SQLModel):
-    data: list[UserPublic]
-    count: int
-
-
-# Shared properties
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
-    pass
-
-
-# Properties to receive on item update
-class ItemUpdate(SQLModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
-
-
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
-    )
-    owner: User | None = Relationship(back_populates="items")
-
-
-# Properties to return via API, id is always required
-class ItemPublic(ItemBase):
-    id: uuid.UUID
-    owner_id: uuid.UUID
-    created_at: datetime | None = None
-
-
-class ItemsPublic(SQLModel):
-    data: list[ItemPublic]
-    count: int
-
-
-# Generic message
-class Message(SQLModel):
-    message: str
-
-
-# JSON payload containing access token
-class Token(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-
-
-# Contents of JWT token
-class TokenPayload(SQLModel):
-    sub: str | None = None
-
-
-class NewPassword(SQLModel):
-    token: str
-    new_password: str = Field(min_length=8, max_length=128)
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(String, primary_key=True, default=gen_uuid)
+    document_id = Column(String, ForeignKey("documents.id"), nullable=True)
+    action = Column(String, nullable=False)
+    status = Column(String, nullable=True)
+    remarks = Column(Text, nullable=True)
+    processing_time = Column(Float, nullable=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    document = relationship("Document", back_populates="audit_logs")
