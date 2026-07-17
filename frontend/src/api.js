@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API = axios.create({ baseURL: "https://financial-parser-4e4u.onrender.com" });
+const API = axios.create({
+  baseURL: "https://financial-parser-1.onrender.com",
+});
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
