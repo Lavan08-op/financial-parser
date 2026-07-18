@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_token
 from app.models import User, UserRole
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 import uuid
 
@@ -16,6 +16,13 @@ class UserCreate(BaseModel):
     email: str
     password: str
     role: Optional[str] = "user"
+
+    @field_validator("password")
+    @classmethod
+    def password_fits_bcrypt(cls, password: str) -> str:
+        if len(password.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes")
+        return password
 
 class UserResponse(BaseModel):
     id: str
