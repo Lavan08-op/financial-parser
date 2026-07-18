@@ -12,7 +12,8 @@ export default function Reports() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white mb-6">Reports</h1>
+      <h
+       className="text-2xl font-bold text-white mb-6">Reports</h >
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -46,14 +47,16 @@ export default function Reports() {
                 </td>
                 <td className="px-4 py-3 flex gap-2">
                   <a
-                    href={`http://127.0.0.1:8000/api/reports/export/pdf/${r.document_id}?token=${localStorage.getItem("token")}`}
+                    href={`https://financial-parser-1.onrender.com
+/api/reports/export/pdf/${r.document_id}?token=${localStorage.getItem("token")}`}
                     target="_blank"
                     className="text-xs bg-red-700 text-white px-2 py-1 rounded"
                   >
                     PDF
                   </a>
                   <a
-                    href={`http://127.0.0.1:8000/api/reports/export/excel/${r.document_id}?token=${localStorage.getItem("token")}`}
+                    href={`https://financial-parser-1.onrender.com
+/api/reports/export/excel/${r.document_id}?token=${localStorage.getItem("token")}`}
                     target="_blank"
                     className="text-xs bg-green-700 text-white px-2 py-1 rounded"
                   >

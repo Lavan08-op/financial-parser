@@ -48,11 +48,13 @@ export default function DocumentDetail() {
   const token = localStorage.getItem("token");
   const exportPDF = () =>
     window.open(
-      `http://127.0.0.1:8000/api/reports/export/pdf/${id}?token=${token}`,
+      `https://financial-parser-1.onrender.com
+/api/reports/export/pdf/${id}?token=${token}`,
     );
   const exportExcel = () =>
     window.open(
-      `http://127.0.0.1:8000/api/reports/export/excel/${id}?token=${token}`,
+      `https://financial-parser-1.onrender.com
+/api/reports/export/excel/${id}?token=${token}`,
     );
 
   if (!doc) return <div className="text-gray-400">Loading...</div>;
